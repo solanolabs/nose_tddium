@@ -31,7 +31,12 @@ class Tee(object):
 
     def write(self, *args):
         for s in self._streams:
-            s.write(*args)
+            # convert symbols to ascii for each stream
+            # alternatively, import StringIO instead of cStringIO
+            # without encoding convertion
+            # TODO: performance evaluation
+            dat = args[0]
+            s.write(dat.encode('ascii', 'replace'))
 
     def flush(self):
         for s in self._streams:

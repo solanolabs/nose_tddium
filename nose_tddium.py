@@ -29,14 +29,18 @@ class Tee(object):
     def __init__(self, *args):
         self._streams = args
 
-    def write(self, *args):
-        for s in self._streams:
-            # convert symbols to ascii for each stream
-            # alternatively, import StringIO instead of cStringIO
-            # without encoding convertion
-            # TODO: performance evaluation
-            dat = args[0]
-            s.write(dat.encode('ascii', 'replace'))
+    def write(self, s):
+        for stream in self._streams:
+            try:
+                stream.write(s)
+            except UnicodeEncodeError:
+                # Lib/ctypes sets the conversion mode to ("ascii", "strict")
+                # which means that a character c with ord(c) > 127 can cause
+                # a UnicodeError during encoding. The behavior here is to
+                # replace the malformed data with a suitable replacement
+                # character such as '?' in ascii strings ('\u<code>' for
+                # utf-8 strings).
+                stream.write(s.encode('ascii', 'replace'))
 
     def flush(self):
         for s in self._streams:

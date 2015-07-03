@@ -12,6 +12,10 @@ from time import time
 from nose.plugins.base import Plugin
 from nose.exc import SkipTest
 
+from nose.suite import ContextSuite
+from nose.case import Test
+
+
 def format_exception(exc_info):
     ec, ev, tb = exc_info
 
@@ -54,7 +58,7 @@ class TddiumOutput(Plugin):
             taken = time() - self._timer
         else:
             # test died before it ran (probably error in setup())
-            # or success/failure added before test started probably 
+            # or success/failure added before test started probably
             # due to custom TestResult munging
             taken = 0.0
         return taken
@@ -135,14 +139,31 @@ class TddiumOutput(Plugin):
         return ''
 
     def addError(self, test, err, capt=None):
-        if issubclass(err[0], SkipTest):
-            status = 'skip'
-        else:
-            status = 'error'
-        self._addResult(test, {
-            'status': status,
-            'traceback': format_exception(err),
-            })
+	# --- ContextSuite issue fix ---
+
+	# ContextSuite needs to find a different way to report the error
+        # without abusing the ResultProxy API, or the ResultProxy API needs
+        # to be changed to also accept nose suites, but in that case it needs
+        # to handle things differently when calling plugin methods, where
+        # the plugins expect to receive nose.case.Test instances (e.g. isinstance checks).
+
+        # A workaround could be to just add checks in this plugin for correct instance.
+
+	# More info could be found here:
+	# https://github.com/nose-devs/nose/issues/506
+	# https://code.google.com/p/python-nose/issues/detail?id=217
+
+	if isinstance(test, ContextSuite):
+	    pass
+	elif isinstance(test, Test):
+            if issubclass(err[0], SkipTest):
+                status = 'skip'
+            else:
+                status = 'error'
+            self._addResult(test, {
+                'status': status,
+                'traceback': format_exception(err),
+                })
 
     def addFailure(self, test, err, capt=None, tb_info=None):
         self._addResult(test, {
